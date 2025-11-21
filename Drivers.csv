@@ -1,0 +1,64 @@
+DriverID,MaxNightsOvernightPerWeek,Max Load Pounds,Location,State
+TK59,1,85000,Breckenridge,MN
+QR87,1,85000,Breckenridge,MN
+YL71,2,85000,Breckenridge,MN
+XK14,2,50000,Burnsville,MN
+YS64,1,85000,Burnsville,MN
+GF97,1,85000,Burnsville,MN
+LP18,1,30000,Dayton,MN
+YT96,1,85000,Dayton,MN
+KL70,3,85000,Dayton,MN
+ZD13,1,53000,Fergus Falls,MN
+QQ12,2,60000,Fergus Falls,MN
+OV78,4,60000,Fergus Falls,MN
+AD27,1,85000,Fergus Falls,MN
+UG29,4,85000,Fergus Falls,MN
+BD81,1,100000,Fergus Falls,MN
+KV54,4,85000,Marshall,MN
+ER64,4,85000,Marshall,MN
+GJ34,3,110000,Marshall,MN
+CP85,3,45000,Moorhead,MN
+NH85,1,53000,Moorhead,MN
+FC32,4,85000,Moorhead,MN
+KV48,3,95000,Moorhead,MN
+BI80,1,85000,Missoula,MT
+AA21,1,85000,Missoula,MT
+CY23,4,85000,Missoula,MT
+XZ66,1,40000,Bismarck,ND
+QQ86,1,85000,Bismarck,ND
+PJ57,4,85000,Bismarck,ND
+FU58,1,60000,Casselton,ND
+NL97,4,60000,Casselton,ND
+LT79,1,85000,Casselton,ND
+RX99,3,60000,Dickinson,ND
+TA72,3,85000,Dickinson,ND
+JY90,4,85000,Dickinson,ND
+GP70,4,30000,Kindred,ND
+AY98,1,85000,Kindred,ND
+FF39,4,85000,Kindred,ND
+PK51,4,30000,Lisbon,ND
+ME55,2,65000,Lisbon,ND
+RG20,1,85000,Lisbon,ND
+BC19,2,60000,Washburn,ND
+TG72,1,85000,Washburn,ND
+CG61,2,85000,Washburn,ND
+XZ77,2,85000,Washburn,ND
+JZE01,1,85000,Aberdeen,SD
+AB12,2,85000,Aberdeen,SD
+DE83,1,95000,Aberdeen,SD
+XQ63,1,60000,Rapid City,SD
+HA62,1,60000,Rapid City,SD
+ZB32,4,85000,Rapid City,SD
+JX53,2,60000,Redfield,SD
+FB60,1,85000,Redfield,SD
+UF44,2,90000,Redfield,SD
+TD44,1,60000,Webster,SD
+MZ42,1,85000,Webster,SD
+MY43,3,85000,Webster,SD
+SO76,1,40000,Salt Lake City,UT
+IZ78,4,85000,Salt Lake City,UT
+XH49,1,90000,Salt Lake City,UT
+RJ79,1,125000,Salt Lake City,UT
+NH42,1,40000,Casper,WY
+VI61,1,90000,Casper,WY
+JF64,1,110000,Casper,WY

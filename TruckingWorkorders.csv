@@ -1,0 +1,181 @@
+WorkOrderNumber,Origination,Destination,LoadWeight,DeliveryDays
+23,"Aberdeen, SD","Burnsville, MN",19600,1
+68,"Aberdeen, SD","Salt Lake City, UT",84700,1
+120,"Aberdeen, SD","Casselton, ND",70800,2
+12,"Aberdeen, SD","Lisbon, ND",47900,3
+9,"Aberdeen, SD","Casper, WY",28500,4
+107,"Aberdeen, SD","Missoula, MT",39900,4
+53,"Aberdeen, SD","Washburn, ND",70100,6
+26,"Aberdeen, SD","Burnsville, MN",70000,7
+55,"Aberdeen, SD","Lisbon, ND",64100,7
+150,"Aberdeen, SD","Lisbon, ND",67500,8
+129,"Aberdeen, SD","Bismarck, ND",30400,9
+42,"Aberdeen, SD","Casselton, ND",34700,12
+118,"Aberdeen, SD","Rapid City, SD",20500,15
+113,"Bismarck, ND","Marshall, MN",54100,1
+141,"Bismarck, ND","Dickinson, ND",76400,3
+165,"Bismarck, ND","Casper, WY",25900,3
+58,"Bismarck, ND","Washburn, ND",39500,5
+74,"Bismarck, ND","Burnsville, MN",67900,6
+144,"Bismarck, ND","Washburn, ND",44000,6
+92,"Bismarck, ND","Redfield,SD",72200,11
+108,"Bismarck, ND","Dickinson, ND",16700,12
+142,"Bismarck, ND","Redfield,SD",46100,12
+86,"Bismarck, ND","Casper, WY",48800,14
+54,"Breckenridge, MN","Aberdeen, SD",44400,2
+154,"Breckenridge, MN","Salt Lake City, UT",67300,2
+97,"Breckenridge, MN","Dayton, MN",36000,4
+95,"Breckenridge, MN","Burnsville, MN",29500,6
+111,"Breckenridge, MN","Dickinson, ND",83600,6
+21,"Breckenridge, MN","Marshall, MN",72200,7
+61,"Breckenridge, MN","Marshall, MN",19100,7
+49,"Breckenridge, MN","Kindred, ND",71600,9
+161,"Breckenridge, MN","Missoula, MT",74000,9
+8,"Breckenridge, MN","Burnsville, MN",66000,14
+152,"Burnsville, MN","Moorhead, MN",80500,1
+125,"Burnsville, MN","Kindred, ND",33300,2
+11,"Burnsville, MN","Dickinson, ND",52400,3
+110,"Burnsville, MN","Salt Lake City, UT",76500,5
+173,"Burnsville, MN","Bismarck, ND",36800,6
+168,"Burnsville, MN","Rapid City, SD",36100,7
+109,"Burnsville, MN","Casselton, ND",80700,8
+119,"Burnsville, MN","Kindred, ND",70100,8
+85,"Burnsville, MN","Missoula, MT",46800,9
+135,"Burnsville, MN","Dayton, MN",17400,10
+87,"Burnsville, MN","Missoula, MT",27200,11
+157,"Burnsville, MN","Kindred, ND",54500,11
+78,"Burnsville, MN","Kindred, ND",65500,15
+89,"Casper, WY","Lisbon, ND",19000,2
+14,"Casper, WY","Aberdeen, SD",40900,5
+177,"Casper, WY","Casselton, ND",39400,5
+163,"Casper, WY","Redfield,SD",84000,7
+70,"Casper, WY","Bismarck, ND",68300,9
+105,"Casper, WY","Casselton, ND",39300,9
+175,"Casper, WY","Rapid City, SD",59000,10
+52,"Casper, WY","Casselton, ND",64800,14
+19,"Casselton, ND","Marshall, MN",46600,1
+91,"Casselton, ND","Lisbon, ND",50900,1
+155,"Casselton, ND","Dayton, MN",33900,2
+27,"Casselton, ND","Lisbon, ND",40300,3
+37,"Casselton, ND","Burnsville, MN",28500,5
+67,"Casselton, ND","Bismarck, ND",28700,5
+56,"Casselton, ND","Moorhead, MN",34400,6
+136,"Casselton, ND","Washburn, ND",53000,6
+146,"Casselton, ND","Missoula, MT",41000,6
+106,"Casselton, ND","Marshall, MN",75500,7
+117,"Casselton, ND","Kindred, ND",58100,7
+153,"Casselton, ND","Salt Lake City, UT",28000,7
+131,"Casselton, ND","Aberdeen, SD",34000,9
+24,"Casselton, ND","Bismarck, ND",23900,11
+16,"Casselton, ND","Redfield,SD",49400,13
+94,"Dayton, MN","Washburn, ND",62200,2
+123,"Dayton, MN","Moorhead, MN",26300,4
+79,"Dayton, MN","Casper, WY",71100,5
+22,"Dayton, MN","Aberdeen, SD",78600,6
+100,"Dayton, MN","Missoula, MT",16400,6
+130,"Dayton, MN","Burnsville, MN",77500,6
+134,"Dayton, MN","Lisbon, ND",36500,6
+73,"Dayton, MN","Rapid City, SD",53900,7
+159,"Dayton, MN","Salt Lake City, UT",64000,7
+7,"Dayton, MN","Moorhead, MN",62400,10
+32,"Dayton, MN","Fergus Falls, MN",22300,14
+40,"Dayton, MN","Moorhead, MN",73500,14
+36,"Dayton, MN","Fergus Falls, MN",48600,15
+43,"Dickinson, ND","Casper, WY",75500,1
+180,"Dickinson, ND","Burnsville, MN",59800,1
+102,"Dickinson, ND","Dayton, MN",52800,3
+145,"Dickinson, ND","Breckenridge, MN",45900,4
+29,"Dickinson, ND","Burnsville, MN",30100,5
+65,"Dickinson, ND","Moorhead, MN",83300,6
+10,"Dickinson, ND","Missoula, MT",30600,7
+80,"Dickinson, ND","Moorhead, MN",19200,8
+179,"Dickinson, ND","Redfield,SD",30400,9
+164,"Dickinson, ND","Lisbon, ND",69400,12
+160,"Fergus Falls, MN","Breckenridge, MN",54100,4
+170,"Fergus Falls, MN","Kindred, ND",35300,4
+66,"Fergus Falls, MN","Dickinson, ND",42300,5
+128,"Fergus Falls, MN","Missoula, MT",27500,5
+35,"Fergus Falls, MN","Breckenridge, MN",72000,6
+76,"Fergus Falls, MN","Bismarck, ND",25200,6
+28,"Fergus Falls, MN","Redfield,SD",55100,7
+112,"Fergus Falls, MN","Rapid City, SD",80500,7
+147,"Fergus Falls, MN","Moorhead, MN",22100,7
+172,"Fergus Falls, MN","Casselton, ND",80400,7
+151,"Fergus Falls, MN","Kindred, ND",78800,9
+149,"Fergus Falls, MN","Washburn, ND",35100,12
+38,"Fergus Falls, MN","Casselton, ND",29700,15
+176,"Kindred, ND","Fergus Falls, MN",30600,1
+174,"Kindred, ND","Burnsville, MN",20100,3
+5,"Kindred, ND","Marshall, MN",62300,4
+93,"Kindred, ND","Bismarck, ND",20200,4
+34,"Kindred, ND","Marshall, MN",23300,5
+18,"Kindred, ND","Marshall, MN",43500,6
+45,"Kindred, ND","Lisbon, ND",21200,7
+132,"Kindred, ND","Rapid City, SD",35400,7
+82,"Kindred, ND","Aberdeen, SD",74700,10
+148,"Kindred, ND","Casselton, ND",65300,10
+60,"Lisbon, ND","Bismarck, ND",55700,1
+96,"Lisbon, ND","Rapid City, SD",74700,4
+138,"Lisbon, ND","Kindred, ND",40900,4
+84,"Lisbon, ND","Dayton, MN",72400,5
+121,"Lisbon, ND","Aberdeen, SD",54700,6
+77,"Lisbon, ND","Casselton, ND",47300,11
+83,"Marshall, MN","Bismarck, ND",29200,1
+133,"Marshall, MN","Lisbon, ND",47200,1
+25,"Marshall, MN","Aberdeen, SD",26300,4
+72,"Marshall, MN","Bismarck, ND",29600,4
+51,"Marshall, MN","Casper, WY",47100,5
+127,"Marshall, MN","Dayton, MN",29900,5
+156,"Marshall, MN","Dickinson, ND",80200,5
+114,"Marshall, MN","Fergus Falls, MN",57300,6
+88,"Marshall, MN","Rapid City, SD",67000,7
+99,"Marshall, MN","Missoula, MT",24400,9
+63,"Marshall, MN","Dayton, MN",59200,15
+31,"Missoula, MT","Aberdeen, SD",38700,1
+162,"Missoula, MT","Rapid City, SD",38200,1
+126,"Missoula, MT","Kindred, ND",38400,3
+169,"Missoula, MT","Dayton, MN",24500,4
+47,"Missoula, MT","Moorhead, MN",66500,7
+3,"Missoula, MT","Marshall, MN",24800,9
+104,"Missoula, MT","Casper, WY",71300,9
+167,"Missoula, MT","Salt Lake City, UT",47000,14
+13,"Moorhead, MN","Missoula, MT",15300,3
+20,"Moorhead, MN","Bismarck, ND",56700,4
+158,"Moorhead, MN","Fergus Falls, MN",62000,5
+62,"Moorhead, MN","Fergus Falls, MN",71200,7
+103,"Moorhead, MN","Aberdeen, SD",77300,9
+122,"Moorhead, MN","Kindred, ND",36400,9
+17,"Moorhead, MN","Lisbon, ND",65500,10
+59,"Moorhead, MN","Washburn, ND",34500,11
+143,"Moorhead, MN","Lisbon, ND",68700,12
+101,"Moorhead, MN","Rapid City, SD",42600,14
+178,"Moorhead, MN","Aberdeen, SD",74900,14
+81,"Rapid City, SD","Breckenridge, MN",60900,5
+4,"Rapid City, SD","Salt Lake City, UT",49600,7
+115,"Rapid City, SD","Fergus Falls, MN",75700,10
+75,"Redfield,SD","Aberdeen, SD",17700,1
+1,"Redfield,SD","Casper, WY",70500,2
+41,"Redfield,SD","Kindred, ND",54600,2
+137,"Redfield,SD","Bismarck, ND",25500,2
+2,"Redfield,SD","Casper, WY",32200,3
+39,"Redfield,SD","Aberdeen, SD",21200,4
+44,"Redfield,SD","Dickinson, ND",40200,4
+124,"Redfield,SD","Salt Lake City, UT",21300,4
+50,"Redfield,SD","Dayton, MN",24100,5
+139,"Redfield,SD","Dayton, MN",52100,6
+6,"Redfield,SD","Breckenridge, MN",80900,9
+48,"Redfield,SD","Salt Lake City, UT",82700,9
+71,"Redfield,SD","Moorhead, MN",81200,9
+90,"Redfield,SD","Breckenridge, MN",79900,13
+140,"Salt Lake City, UT","Kindred, ND",79800,4
+166,"Salt Lake City, UT","Breckenridge, MN",71400,4
+69,"Salt Lake City, UT","Moorhead, MN",17500,6
+171,"Salt Lake City, UT","Bismarck, ND",41400,7
+33,"Salt Lake City, UT","Burnsville, MN",66300,13
+15,"Washburn, ND","Dickinson, ND",25500,5
+30,"Washburn, ND","Dickinson, ND",35200,6
+116,"Washburn, ND","Casselton, ND",67700,6
+46,"Washburn, ND","Rapid City, SD",66000,8
+57,"Washburn, ND","Kindred, ND",26200,10
+64,"Washburn, ND","Breckenridge, MN",23200,12
+98,"Washburn, ND","Lisbon, ND",82500,14
