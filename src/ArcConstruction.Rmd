@@ -1,0 +1,134 @@
+---
+title: "ArcConstruction"
+author: "Cheryn"
+date: "2025-12-03"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+# Locations, Arcs, and Valid Arcs
+
+Use a `$` to refer to a certain column and `[i]` is the row index. These will be turned into dataframes.
+
+Things to think about with arcs:
+- If using chunks, you could make a function to assemble each chunk
+- scales with workorders
+
+chunking
+- hierchical structures with chunking.
+- clusters by divergence.
+- or clusters by diversity.
+- or clusters by distance
+- or clusters by workorder similarity
+- clusters by driver lots of overnights?
+- clusters by reducing availability after each chunk
+- we're actually chunking workorders
+- cluster by time constraint
+- penalize incomplete workorders in relation to the due date.
+
+
+## Part 1: Locations
+
+Size of locations = 2(drivers COUNT + workorders COUNT)
+
+```{r}
+
+workorders <- read_csv("TruckingWorkorders.csv")
+workorders<- workorders %>% filter(Chunk_Random == 1)
+drivers <- read_csv("Region 1 Drivers.csv")
+
+
+# Thanks ChatGPT:
+
+locations <- bind_rows(
+  workorders %>%
+    transmute(
+      location = Origination,
+      purpose  = "pickup",
+      entity   = WorkOrderNumber
+    ),
+  workorders %>%
+    transmute(
+      location = Destination,
+      purpose  = "dropoff",
+      entity   = WorkOrderNumber
+    ),
+  drivers %>%
+    transmute(
+      location = Start_location,
+      purpose  = "start",
+      entity   = DriverID
+    ),
+  drivers %>%
+    transmute(
+      location = End_location,
+      purpose  = "end",
+      entity   = DriverID
+    )
+)
+
+locations
+```
+
+## Part 2: Valid Connections
+
+```{r}
+valid_connections <- tibble(
+  from = c("start", "start", "pickup", "pickup", "dropoff", "dropoff", "dropoff"),
+  to = c("pickup", "end", "pickup", "dropoff", "pickup", "dropoff", "end")
+)
+```
+
+## Part 3: Arcs
+
+Size of Arcs = 2(drivers COUNT + workorders COUNT)(drivers COUNT + workorders COUNT - .5)
+
+(Approximated due to filtering)
+
+```{r}
+
+# Create all pairwise combinations of locations with themselves
+arcs <- locations %>%
+  # Rename columns for clarity before joining
+  rename(
+    from_location = location,
+    from_purpose  = purpose,
+    from_entity   = entity
+  ) %>%
+  # Cross join: every row with every row
+  crossing(
+    locations %>% 
+      rename(
+        to_location = location,
+        to_purpose  = purpose,
+        to_entity   = entity
+      )
+  ) %>%
+  # Remove self-connections (same row connecting to itself)
+  filter(
+    !(from_location == to_location &
+      from_purpose  == to_purpose &
+      from_entity   == to_entity)
+  ) %>%
+  # Keep only valid purpose → purpose transitions
+  semi_join(valid_connections,
+            by = c("from_purpose" = "from",
+                   "to_purpose"   = "to")
+  ) %>%
+  # entities have to be the same for from start to end
+  filter(
+    !(from_purpose == "start" &
+      to_purpose   == "end" &
+      from_entity  != to_entity)
+  )
+
+arcs
+```
+
+
+
+
