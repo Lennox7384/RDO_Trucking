@@ -37,9 +37,10 @@ Size of locations = 2(drivers COUNT + workorders COUNT)
 
 ```{r}
 
-workorders <- read_csv("TruckingWorkorders.csv")
-workorders<- workorders %>% filter(Chunk_Random == 1)
+workorders <- read_csv("Chunked Workorders.csv")
+workorders <- workorders %>% filter(Chunk_10 == 1)
 drivers <- read_csv("Region 1 Drivers.csv")
+drivers <- drivers %>% filter(Chunk_9 == 1)
 
 
 # Thanks ChatGPT:
@@ -65,7 +66,7 @@ locations <- bind_rows(
     ),
   drivers %>%
     transmute(
-      location = End_location,
+      location = End_location, # identical but point to a different column
       purpose  = "end",
       entity   = DriverID
     )
@@ -85,9 +86,16 @@ valid_connections <- tibble(
 
 ## Part 3: Arcs
 
-Size of Arcs = 2(drivers COUNT + workorders COUNT)(drivers COUNT + workorders COUNT - .5)
+Expected Size of Arcs = (2)(drivers COUNT + workorders COUNT)(drivers COUNT + workorders COUNT - 0.5)
 
 (Approximated due to filtering)
+
+
+Potential improvements
+- removing dropoff to pickup of the same order (-1 for each workorder)
+- have a filter in the add_variable to make sure that drivers remove
+- 10 drivers and 10 workorders would make ~800 arcs and that makes 8000 binaries
+
 
 ```{r}
 
