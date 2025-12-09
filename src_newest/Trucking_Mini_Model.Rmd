@@ -1,0 +1,192 @@
+---
+title: "RDO_Trucking"
+output: html_document
+date: "2025-11-21"
+---
+
+## R Markdown
+
+# rdo_trucking_ompr.R
+# Install packages if needed:
+# install.packages(c("ompr","ompr.roi","ROI.plugin.glpk","magrittr","dplyr","tidyr"))
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = 'RDO_Trucking') #This sets the working
+library(readr, quietly = TRUE) # We import this library so that we can read in things from csv files.
+# full_trucking_small_example_fixed_v3.R
+library(ompr)
+library(ompr.roi)
+library(ROI.plugin.glpk)
+library(dplyr)
+```
+
+```{r}
+
+# -----------------------------
+# --- SETS
+# -----------------------------
+drivers_id    <- c("D1"=1, "D2"=2)   # D
+workorders_id <- c("W101"=1, "W102"=2)  # W
+locations     <- c("A", "B", "C")  # N
+T_seq         <- 1:4              # T, minutes
+Days          <- 1:2
+
+# -----------------------------
+# --- PARAMETERS
+# -----------------------------
+MaxNights <- c("D1"=2,"D2"=2)
+MaxLoad   <- c("D1"=4000,"D2"=3000)
+w_order_start  <- c("A","B"); names(w_order_start) <- workorders_id
+w_order_end    <- c("C","A"); names(w_order_end) <- workorders_id
+w_order_weight <- c("W101" = 1000, "W102" = 800)
+w_order_due    <- c("W101" = 2, "W102" = 1)  # DaysDue
+mileage_mat <- matrix(c(
+  0, 60, 120,
+  60, 0,  80,
+  120,80, 0
+), nrow=3, byrow=TRUE)
+rownames(mileage_mat) <- locations; colnames(mileage_mat) <- locations
+AvgSpeed <- 50
+Cost_Of_Fuel <- 0.4
+drivers_payrate <- c("D1"=25,"D2"=25)
+M_big <- 1e6
+
+# Map days -> time indices
+T_day <- lapply(Days, function(day) T_seq)
+names(T_day) <- as.character(Days)
+
+# -----------------------------
+# --- MODEL
+# -----------------------------
+model <- MIPModel() |>
+  # -----------------------------
+  # --- DECISION VARIABLES
+  # -----------------------------
+  add_variable(routed[d,i,j,t,w], d=drivers_id, i=locations, j=locations, t=T_seq, w=workorders_id, type="binary") |>  # Routed
+  add_variable(atnode[w,i,t], w=workorders_id, i=locations, t=T_seq, type="binary") |>  # AtNode
+  add_variable(delivered[w], w=workorders_id, type="binary") |>  # Delivered
+  add_variable(sleepon[d,day], d=drivers_id, day=Days, type="binary") |>  # SleepON
+  add_variable(didwork[d,day], d=drivers_id, day=Days, type="binary") |>  # DidWork
+  add_variable(driverhours_day[d,day], d=drivers_id, day=Days, type="continuous", lb=0) |>  # daily hours
+  add_variable(driverhours_total[d], d=drivers_id, type="continuous", lb=0) |>  # weekly hours
+  add_variable(overtime_hours[d], d=drivers_id, type="continuous", lb=0) |>  # Overtime
+  add_variable(drivermiles[d], d=drivers_id, type="continuous", lb=0) |>  # Total miles
+  add_variable(overnight_cost, type="continuous", lb=0) |>  # cost variables
+  add_variable(fuel_cost, type="continuous", lb=0) |>
+  add_variable(pay_cost, type="continuous", lb=0)
+
+# -----------------------------
+# --- CONSTRAINTS
+# -----------------------------
+
+# --- 1) Flow: Initial locations (All workorders at their origin at t0)
+for (w in workorders_id) {
+  model <- model |> add_constraint(atnode[w, w_order_start[w], 1] == 1)
+  # All other nodes do not have inventory at t[0]
+  for (i in setdiff(locations, w_order_start[w])) {
+    model <- model |> add_constraint(atnode[w, i, 1] == 0)
+  }
+}
+
+# --- 2) A work_order can only be at one node at a time
+model <- model |> add_constraint(sum_over(atnode[w,i,t], i=locations) == 1, w=workorders_id, t=T_seq)
+
+# --- 3) Prevent moving workorder from where it isn't
+model <- model |> add_constraint(sum_over(routed[d,i,j,t,w], j=locations) <= atnode[w,i,t],
+                                  d=drivers_id, i=locations, t=T_seq, w=workorders_id)
+
+# --- 4) Flow between nodes (this one is problematic, had to adapt)
+model <- model |> add_constraint(
+  atnode[w,i,t+1] ==
+    atnode[w,i,t] +
+    sum_expr(routed[d,k,i,t,w], d=drivers_id, k=locations) -
+    sum_expr(routed[d,i,j,t,w], d=drivers_id, j=locations),
+  w=workorders_id,
+  i=locations,
+  t=T_seq[T_seq < max(T_seq)]
+)
+
+# --- 5) Delivered definition
+model <- model |> add_constraint(delivered[w] <= sum_over(atnode[w, w_order_end[w], t], t=T_seq), w=workorders_id)
+
+# --- 6) All deliveries must be made on time
+for (w in workorders_id) {
+  valid_T <- T_seq[T_seq <= w_order_due[w]*2]  # 2 time steps per day
+  model <- model |> add_constraint(sum_over(atnode[w, w_order_end[w], t], t=valid_T) >= 1)
+}
+
+# --- 7) Load capacity (truck max)
+model <- model |> add_constraint(sum_over(w_order_weight[w] * routed[d,i,j,t,w], w=workorders_id) <= MaxLoad[d],
+                                  d=drivers_id, i=locations, j=locations, t=T_seq)
+
+# --- 8) Driver hours per day
+for (day in Days) {
+  tvec <- T_day[[as.character(day)]]
+  model <- model |> add_constraint(driverhours_day[d,day] ==
+                                      sum_over(routed[d,i,j,t,w]*(mileage_mat[i,j]/AvgSpeed), i=locations, j=locations, t=tvec, w=workorders_id),
+                                    d=drivers_id)
+}
+
+# --- 9) All should be delivered (?) Had to add this so they got delivered
+model <- model |> add_constraint(delivered[w] == 1, w = workorders_id)
+
+# --- 10) Max hours per day
+IsSat <- setNames(ifelse(Days==2,1,0), Days)
+IsWorkday <- setNames(1 - IsSat, Days)
+model <- model |> add_constraint(driverhours_day[d,day] <= 14*IsWorkday[day] + 4*IsSat[day],
+                                  d=drivers_id, day=Days)
+
+# --- 11) DidWork big-M
+model <- model |> add_constraint(sum_over(routed[d,i,j,t,w], i=locations, j=locations, t=T_seq, w=workorders_id) <= M_big*didwork[d,day],
+                                  d=drivers_id, day=Days)
+
+# --- 12) Max overnights
+model <- model |> add_constraint(sum_over(sleepon[d,day], day=Days) <= MaxNights[d], d=drivers_id)
+
+# --- 13) Total & Overtime hours
+model <- model |> add_constraint(driverhours_total[d] == sum_over(driverhours_day[d,day], day=Days), d=drivers_id)
+model <- model |> add_constraint(overtime_hours[d] >= driverhours_total[d]-40, d=drivers_id)
+model <- model |> add_constraint(overtime_hours[d] >= 0, d=drivers_id)
+
+# --- 14) Total miles
+model <- model |> add_constraint(drivermiles[d] == sum_over(routed[d,i,j,t,w]*mileage_mat[i,j], i=locations, j=locations, t=T_seq, w=workorders_id), d=drivers_id)
+
+# --- 15) Cost definitions
+model <- model |>
+  add_constraint(overnight_cost == sum_expr(175*sleepon[d,day], d=drivers_id, day=Days)) |>
+  add_constraint(fuel_cost      == sum_expr(routed[d,i,j,t,w]*mileage_mat[i,j]*Cost_Of_Fuel,
+                                           d=drivers_id, i=locations, j=locations, t=T_seq, w=workorders_id)) |>
+  add_constraint(pay_cost       == sum_expr(drivers_payrate[d]*(driverhours_total[d]+0.5*overtime_hours[d]), d=drivers_id))
+
+# -----------------------------
+# --- OBJECTIVE
+# -----------------------------
+model <- model |> set_objective(overnight_cost + fuel_cost + pay_cost, sense="min")
+
+# -----------------------------
+# --- SOLVE
+# -----------------------------
+sol <- solve_model(model, with_ROI(solver="glpk", verbose=TRUE))
+
+cat("Status:", sol$status, "\n")
+if (sol$status %in% c("optimal","feasible")) {
+  print(sol |> get_solution(drivermiles[d]))
+  print(sol |> get_solution(driverhours_total[d]))
+  print(sol |> get_solution(overtime_hours[d]))
+  print(sol |> get_solution(delivered[w]))
+  
+  
+}
+
+ print(sol |> get_solution(drivermiles[d]))
+  print(sol |> get_solution(driverhours_total[d]))
+  print(sol |> get_solution(overtime_hours[d]))
+  print(sol |> get_solution(delivered[w]))
+  print(sol |> get_solution(routed[d,i,j,t,w]))
+  
+  print(sol[["solution"]])
+  
+      print(sol[["solution"]][names(which(sol[["solution"]]>0))])
+  
+
+```
