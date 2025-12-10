@@ -251,3 +251,236 @@ valid_chains <- chain_candidates %>%
 
 cat("Chaining complete. Found", nrow(valid_chains), "valid paired routes.\n")
 ```
+
+```{r Paired_route_chaining}
+# --- Step 1: Preparing Data for Chaining ---
+wo_locations <- work_orders %>%
+  select(WorkOrderNumber, Origination, Destination) %>%
+  rename(Order_Origin = Origination, Order_Dest = Destination)
+
+params_enhanced <- params_df %>%
+  left_join(wo_locations, by = "WorkOrderNumber")
+
+# --- Step 2: The "Self-Join" (Generating Candidates) ---
+chain_candidates <- params_enhanced %>%
+  inner_join(params_enhanced, by = "DriverID", suffix = c("_1", "_2")) %>%
+  filter(WorkOrderNumber_1 != WorkOrderNumber_2)
+
+# --- Step 3: FAST Calculation (Vectorized) ---
+# Instead of calculating row-by-row, we join the mileage table directly.
+# This is usually 1000x faster.
+
+valid_chains <- chain_candidates %>%
+  # Join to get the deadhead distance instantly
+  left_join(mileage_lookup, by = c("Order_Dest_1" = "Origination", "Order_Origin_2" = "Destination")) %>%
+  
+  mutate(
+    # Handling missing distances (if cities don't match or are same city)
+    # If City A == City B, distance is 0. If not found in table, 99999.
+    Deadhead_Dist = case_when(
+      Order_Dest_1 == Order_Origin_2 ~ 0,
+      is.na(Distance) ~ 99999,
+      TRUE ~ Distance
+    ),
+    
+    # Calculating costs/times using columns (Vectorized math is instant)
+    Deadhead_Time = Deadhead_Dist / AVG_SPEED_MPH,
+    Deadhead_Cost = Deadhead_Dist * AVG_COST_PER_MILE,
+    
+    Total_Chain_Time = WorkTime_ij_1 + Deadhead_Time + WorkTime_ij_2,
+    Total_Chain_Cost = Cost_ij_1 + Cost_ij_2 + Deadhead_Cost,
+    Requires_Overnight = ifelse(Total_Chain_Time > HOURS_PER_WORKDAY, 1, 0)
+  ) %>%
+  
+  # --- Step 4: Filtering  ---
+  filter(
+    Deadhead_Dist < 500,
+    case_when(
+      MaxOvernight_i_1 == 0 ~ Total_Chain_Time <= HOURS_PER_WORKDAY,
+      MaxOvernight_i_1 > 0  ~ Total_Chain_Time <= (HOURS_PER_WORKDAY * 2)
+    ),
+    Requires_Overnight <= MaxOvernight_i_1
+  ) %>%
+  
+  # Select final columns
+  select(
+    DriverID,
+    Order1 = WorkOrderNumber_1,
+    Order2 = WorkOrderNumber_2,
+    TotalCost = Total_Chain_Cost,
+    TotalTime = Total_Chain_Time,
+    Overnights = Requires_Overnight
+  )
+
+cat("Chaining complete. Found", nrow(valid_chains), "valid paired routes.\n")
+```
+
+
+```{r joining_and_routing_valid _orders_both_Singles_and_paired}
+# --- Step 1: Formatting the "Singles" ---
+# We give them a generic shape: RouteID, Driver, Cost, and a specific "Type"
+singles_formatted <- params_df %>%
+  mutate(
+    RouteType = "Single",
+    # We will assign IDs based on row number first
+    TempID = row_number()
+  ) %>%
+  select(DriverID, Cost = Cost_ij, RouteType, TempID, WorkOrderNumber)
+
+# --- Step 2: Formatting the "Pairs" ---
+pairs_formatted <- valid_chains %>%
+  mutate(
+    RouteType = "Pair",
+    # Continue IDs where singles left off
+    TempID = row_number() + nrow(singles_formatted)
+  ) %>%
+  select(DriverID, Cost = TotalCost, RouteType, TempID, Order1, Order2)
+
+# --- Step 3: Creating the Master "Route Headers" Table ---
+# This is the list the solver will actually choose from (x_1, x_2, etc.)
+all_routes <- bind_rows(
+  singles_formatted %>% select(DriverID, Cost, RouteType, TempID),
+  pairs_formatted %>% select(DriverID, Cost, RouteType, TempID)
+) %>%
+  rename(RouteID = TempID) # Finalized name
+
+# --- Step 4: Creating the "Route Contents" Mapping ---
+# This tells the solver: "If you pick Route X, you satisfy Orders Y and Z"
+
+# Getting singles content
+content_singles <- singles_formatted %>%
+  select(RouteID = TempID, OrderID = WorkOrderNumber)
+
+# Getting pairs content (needs to be pivoted so Order1 and Order2 are in one column)
+content_pairs <- pairs_formatted %>%
+  select(RouteID = TempID, Order1, Order2) %>%
+  pivot_longer(cols = c(Order1, Order2), values_to = "OrderID") %>%
+  select(RouteID, OrderID)
+
+# Combine them
+route_orders <- bind_rows(content_singles, content_pairs)
+
+# --- Result ---
+cat("Master Menu Created.\n")
+cat("Total Options:", nrow(all_routes), "\n")
+cat("  - Singles:", nrow(singles_formatted), "\n")
+cat("  - Pairs:  ", nrow(pairs_formatted), "\n")
+
+```
+
+```{r Now_Solving}
+# --- 1. DATA PREP FOR SOLVER ---
+# We need to give the solver simple lists of "Who covers What"
+
+# A. Getting the list of Route IDs for each Driver
+# Format: List where name is DriverID, content is vector of RouteIDs
+driver_map <- split(all_routes$RouteID, all_routes$DriverID)
+
+# B. Getting the list of Route IDs for each Order
+# Format: List where name is OrderID, content is vector of RouteIDs
+order_map <- split(route_orders$RouteID, route_orders$OrderID)
+
+# C. Defining the Cost Vector (in order of RouteID)
+# Ensuring it is sorted by RouteID so x[1] matches Route 1
+costs <- all_routes %>% arrange(RouteID) %>% pull(Cost)
+num_routes <- nrow(all_routes)
+
+# --- 2. BUILD THE MODEL ---
+cat("Building the optimization model... (This might take a moment)\n")
+
+model <- MIPModel() %>%
+  
+  # DECISION VARIABLE: x[i]
+  # 1 if we pick Route i, 0 if we don't.
+  add_variable(x[i], i = 1:num_routes, type = "binary") %>%
+  
+  # OBJECTIVE: Minimize Total Cost
+  set_objective(sum_expr(costs[i] * x[i], i = 1:num_routes), sense = "min") %>%
+  
+  # CONSTRAINT 1: Each Order must be covered EXACTLY once
+  # We loop through every order in our list
+  add_constraint(
+    sum_expr(x[i], i = order_map[[order_id_str]]) == 1, 
+    order_id_str = names(order_map)
+  ) %>%
+
+  # CONSTRAINT 2: Each Driver can do AT MOST one route
+  # We loop through every driver
+  add_constraint(
+    sum_expr(x[i], i = driver_map[[driver_id_str]]) <= 1, 
+    driver_id_str = names(driver_map)
+  )
+
+# --- 3. SOLVE IT ---
+cat("Solving... \n")
+result <- solve_model(model, with_ROI(solver = "glpk", verbose = TRUE))
+
+# --- 4. EXTRACT RESULTS ---
+if (result$status == "optimal" || result$status == "success") {
+  cat("Success! Optimal solution found.\n")
+  
+  # 1. Identify the Winning Routes
+  selected_routes <- get_solution(result, x[i]) %>%
+    filter(value == 1) %>%
+    pull(i)
+  
+  # 2. Retrieve the Route Details
+  # (Join the route ID back to the Order and Driver info)
+  final_details <- route_orders %>%
+    filter(RouteID %in% selected_routes) %>%
+    left_join(all_routes, by = "RouteID") %>%
+    select(DriverID, OrderID, RouteType, Cost) %>%
+    arrange(DriverID) # Sort by Driver to make it easy to read
+  
+  # 3. PRINT THE RESULTS
+  cat("\n--- FINAL ASSIGNMENTS ---\n")
+  cat("Total Cost: $", result$objective_value, "\n")
+  cat("Orders Delivered:", nrow(final_details), "\n")
+  cat("Drivers Used:", n_distinct(final_details$DriverID), "\n\n")
+  
+  # Print the actual table of who does what
+  print(as.data.frame(final_details))
+  
+} else {
+  cat("Solver status:", result$status, "\n")
+  cat("The model could not find a solution.\n")
+  cat("Troubleshooting for Mini Problem:\n")
+  cat("1. Check if 'possible' logic excluded ALL drivers for a specific order.\n")
+  cat("2. Check if you have fewer drivers than orders (Infeasibility).\n")
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
