@@ -8,7 +8,6 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
-library(tidyverse)
 library(ompr)
 library(ompr.roi)
 library(ROI.plugin.glpk)
@@ -277,7 +276,7 @@ model <- MIPModel() %>%
 
   # --------------------------------------------------
   # DV 3: Drive[k, d] — driver d drives arc k
-  # --------------------------------------------------
+  # -------------------------------------------------- Consider not creating a var for drivers at other drivers starts
   add_variable(
     Drive[k, d],
     type = "binary",
@@ -301,7 +300,7 @@ model <- MIPModel() %>%
   add_variable(
     Load[i],
     type = "continuous",
-    lb = -100,
+    lb = 0,
     i = 1:nrow(locations)
   ) %>%
 
@@ -331,19 +330,14 @@ model <- model %>%
     w = Orders
   )  
 
-model <- model %>%
-  add_constraint()  
+#All Assigned work orders must be delivered? maybe this is needed
+
 
 #flow
 # A driver only goes to a work order pickup if that driver is assigned
 model <- model %>%
  add_constraint(
-    sum_over(
-      Drive[a, d],
-      a = 1:nrow(arcs),
-      arcs$to_purpose[a] == "pickup",
-      arcs$to_entity[a] == w
-    ) == Assign[d, w],
+    sum_over(Drive[a, d],a = 1:nrow(arcs),arcs$to_purpose[a] == "pickup",arcs$to_entity[a] == w) == Assign[d, w],
     d = Drivers,
     w = Orders
   )
@@ -355,7 +349,7 @@ model <- model %>%
       Drive[a, d],
       a = 1:nrow(arcs),
       arcs$from_purpose[a] == "pickup", # arcs leaving pickup location
-      arcs$to_entity[a] == w
+      arcs$from_entity[a] == w
     ) == Assign[d, w],
     d = Drivers,
     w = Orders)
@@ -380,13 +374,14 @@ model <- model %>%
       Drive[a, d],
        a = 1:nrow(arcs),
       arcs$from_purpose[a] == "dropoff", # # arcs leaving dropoff locationn
-      arcs$to_entity[a] == w
+      arcs$from_entity[a] == w
     ) == Assign[d, w],
     d = Drivers,
     w = Orders
   )
 
-#Drivers must leave their start location and reach their end location
+#Drivers must leave their start location and reach their end location Consider preventing drivers from leaving other dreivers start look at top notes
+
 model <- model %>%
   add_constraint(
     sum_over(
@@ -484,9 +479,25 @@ model <- model %>%
 M_load <- max(Weight) * 10  # Big-M for loads
 
 
+# model <- model %>%
+#     add_constraint(
+#       Load[pickup_location(w)] + Weight[w] <= Load[arc_destination(a)] + sum_over((1 - Drive[a, d]), d=Drivers) * M_load,
+#       w = Orders,
+#       a = 1:nrow(arcs),
+#       arcs$from_purpose[a] =="pickup",
+#       arcs$from_entity[a] == w )
+# 
+# model <- model %>%
+#     add_constraint(
+#       Load[pickup_location(w)] + Weight[w] >= Load[arc_destination(a)] - sum_over((1 - Drive[a, d]), d=Drivers) * M_load,
+#       w = Orders,
+#       a = 1:nrow(arcs),
+#       arcs$from_purpose[a] =="pickup",
+#       arcs$from_entity[a] == w )
+
 model <- model %>%
     add_constraint(
-      Load[pickup_location(w)] + Weight[w] <= Load[arc_destination(a)] + sum_over((1 - Drive[a, d]), d=Drivers) * M_load,
+      Load[pickup_location(w)] + Weight[w] <= Load[arc_destination(a)] + (1 - sum_over(Drive[a, d], d=Drivers)) * M_load,
       w = Orders,
       a = 1:nrow(arcs),
       arcs$from_purpose[a] =="pickup",
@@ -494,27 +505,43 @@ model <- model %>%
 
 model <- model %>%
     add_constraint(
-      Load[pickup_location(w)] + Weight[w] >= Load[arc_destination(a)] - sum_over((1 - Drive[a, d]), d=Drivers) * M_load,
+      Load[pickup_location(w)] + Weight[w] >= Load[arc_destination(a)] - (1 - sum_over(Drive[a, d], d=Drivers)) * M_load,
       w = Orders,
       a = 1:nrow(arcs),
       arcs$from_purpose[a] =="pickup",
       arcs$from_entity[a] == w )
 
 # Dropoff constraints: Load at drop - weight ≤ Load at next location
+# model <- model %>%
+#     add_constraint(
+#       Load[dropoff_location(w)] + Weight[w] <= Load[arc_destination(a)] + sum_over((1 - Drive[a, d]), d=Drivers) * M_load,
+#       w = Orders,
+#       a = 1:nrow(arcs),
+#       arcs$from_purpose[a] =="dropoff",
+#       arcs$from_entity[a] == w )
+# 
+# model <- model %>%
+#     add_constraint(
+#       Load[dropoff_location(w)] + Weight[w] >= Load[arc_destination(a)] - sum_over((1 - Drive[a, d]), d=Drivers) * M_load,
+#       w = Orders,
+#       a = 1:nrow(arcs),
+#       arcs$from_purpose[a] =="dropoff",
+#       arcs$from_entity[a] == w )
+
 model <- model %>%
     add_constraint(
-      Load[dropoff_location(w)] + Weight[w] <= Load[arc_destination(a)] + sum_over((1 - Drive[a, d]), d=Drivers) * M_load,
+      Load[dropoff_location(w)] + Weight[w] <= Load[arc_destination(a)] + (1 - sum_over(Drive[a, d], d=Drivers)) * M_load,
       w = Orders,
       a = 1:nrow(arcs),
-      arcs$from_purpose[a] =="dropoff",
+      arcs$from_purpose[a] == "dropoff",
       arcs$from_entity[a] == w )
 
 model <- model %>%
     add_constraint(
-      Load[dropoff_location(w)] + Weight[w] >= Load[arc_destination(a)] - sum_over((1 - Drive[a, d]), d=Drivers) * M_load,
+      Load[dropoff_location(w)] + Weight[w] >= Load[arc_destination(a)] - (1 - sum_over(Drive[a, d], d=Drivers)) * M_load,
       w = Orders,
       a = 1:nrow(arcs),
-      arcs$from_purpose[a] =="dropoff",
+      arcs$from_purpose[a] == "dropoff",
       arcs$from_entity[a] == w )
 
 
@@ -548,8 +575,19 @@ model <- model %>%
 ```
 
 ```{r}
-model <- model |>
-  add_constraint(LoadTesterVar == Load[arc_destination(a)] + sum_over((1 - Drive[a, d]), d="JZE01") * M_load, w = "WO023", a = 2, arcs$from_purpose[a] =="dropoff", arcs$from_entity[a] == w)
+# choose concrete values
+a_idx <- 2
+w_id  <- "WO023"
+
+# compute destination index of arc a_idx using your helper
+dest_idx <- arc_destination(a_idx)
+
+# add a constraint for that single a_idx
+model <- model %>%
+  add_constraint(
+    LoadTesterVar == Load[dest_idx] + sum_over((1 - Drive[a_idx, d]), d = Drivers) * M_load
+  )
+
 ```
 
 ```{r}
@@ -581,6 +619,11 @@ result <- solve_model(model, with_ROI(solver = "glpk", verbose = TRUE))
 get_solution(result, LoadTesterVar)
 
 ```
+```{r}
+result$additional_solver_output$ROI$status
+```
+
+
 
 ```{r}
 load_results <- get_solution(result, Load[i])
@@ -609,6 +652,11 @@ drive_selected <- drive_vals %>%
 drive_with_arcs <- drive_selected %>%
   left_join(arcs, by = c("a" = "arc_id"))
 drive_with_arcs
+```
+
+
+```{r}
+result$solution[result$solution>0]
 ```
 
 
