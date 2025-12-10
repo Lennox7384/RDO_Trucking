@@ -1,0 +1,614 @@
+---
+title: "ArcConstruction"
+author: "Cheryn"
+date: "2025-12-03"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(tidyverse)
+library(ompr)
+library(ompr.roi)
+library(ROI.plugin.glpk)
+```
+
+# Locations, Arcs, and Valid Arcs
+
+Use a `$` to refer to a certain column and `[i]` is the row index. These will be turned into dataframes.
+
+Things to think about with arcs:
+- If using chunks, you could make a function to assemble each chunk
+- scales with workorders
+
+chunking
+- hierchical structures with chunking.
+- clusters by divergence.
+- or clusters by diversity.
+- or clusters by distance
+- or clusters by workorder similarity
+- clusters by driver lots of overnights?
+- clusters by reducing availability after each chunk
+- we're actually chunking workorders
+- cluster by time constraint
+- penalize incomplete workorders in relation to the due date.
+
+
+## Part 1: Locations
+
+Size of locations = 2(drivers COUNT + workorders COUNT)
+
+
+```{r}
+
+workorders <- read_csv("Chunked_Workorders.csv")
+workorders<- workorders %>% filter(Chunk_Random == 1)
+drivers <- read_csv("Drivers2.csv")
+mileage_csv <- read_csv("MileageMatrix.csv")
+locations <- mileage_csv$Origination
+mileage <- as.matrix(mileage_csv[,-1]) # everything except the first column
+rownames(mileage) <- locations
+mileage[is.na(mileage)] <- 0
+# 1. Remove extra spaces around commas
+colnames(mileage) <- gsub("\\s*,\\s*", ", ", colnames(mileage))
+
+# 2. Trim leading/trailing whitespace just in case
+colnames(mileage) <- trimws(colnames(mileage))
+
+
+
+# Thanks ChatGPT:
+
+locations <- bind_rows(
+  workorders %>%
+    transmute(
+      location = Origination,
+      purpose  = "pickup",
+      entity   = WorkOrderNumber
+    ),
+  workorders %>%
+    transmute(
+      location = Destination,
+      purpose  = "dropoff",
+      entity   = WorkOrderNumber
+    ),
+  drivers %>%
+    transmute(
+      location = Start_location,
+      purpose  = "start",
+      entity   = DriverID
+    ),
+  drivers %>%
+    transmute(
+      location = End_location,
+      purpose  = "end",
+      entity   = DriverID
+    )
+)
+
+locations
+```
+
+## Part 2: Valid Connections
+
+```{r}
+valid_connections <- tibble(
+  from = c("start", "start", "pickup", "pickup", "dropoff", "dropoff", "dropoff"),
+  to = c("pickup", "end", "pickup", "dropoff", "pickup", "dropoff", "end")
+)
+
+```
+
+## Part 3: Arcs
+
+Size of Arcs = 2(drivers COUNT + workorders COUNT)(drivers COUNT + workorders COUNT - .5)
+
+(Approximated due to filtering)
+
+```{r}
+
+# Create all pairwise combinations of locations with themselves
+arcs <- locations %>%
+  # Rename columns for clarity before joining
+  rename(
+    from_location = location,
+    from_purpose  = purpose,
+    from_entity   = entity
+  ) %>%
+  # Cross join: every row with every row
+  crossing(
+    locations %>% 
+      rename(
+        to_location = location,
+        to_purpose  = purpose,
+        to_entity   = entity
+      )
+  ) %>%
+  # Remove self-connections (same row connecting to itself)
+  filter(
+    !(from_location == to_location &
+      from_purpose  == to_purpose &
+      from_entity   == to_entity)
+  ) %>%
+  # Keep only valid purpose → purpose transitions
+  semi_join(valid_connections,
+            by = c("from_purpose" = "from",
+                   "to_purpose"   = "to")
+  ) %>%
+  # entities have to be the same for from start to end
+  filter(
+    !(from_purpose == "start" &
+      to_purpose   == "end" &
+      from_entity  != to_entity)
+  )
+
+# Fix arcs
+arcs <- arcs %>%
+  mutate(
+    from_location = str_replace_all(from_location, "\\s*,\\s*", ", "),  # ensures single space after comma
+    to_location   = str_replace_all(to_location,   "\\s*,\\s*", ", ")
+  )
+arcs <- arcs %>% mutate(arc_id = row_number())
+
+AvgSpeed <- 50  # mph
+
+arcs <- arcs %>%
+  rowwise() %>%
+  mutate(
+    Miles = mileage[from_location, to_location],
+    DriveTime = Miles / AvgSpeed
+  ) %>%
+  ungroup()
+
+
+arcs
+```
+```{r}
+arcs_from <- function(loc) {
+  arcs %>% 
+    filter(from_location == loc)
+}
+
+arcs_to <- function(loc) {
+  arcs %>% 
+    filter(to_location == loc)
+}
+
+pickup_location <- function(WO) {
+  which(locations$purpose == "pickup" & locations$entity == WO)
+}
+
+dropoff_location <- function(WO) {
+  which(locations$purpose == "dropoff" & locations$entity == WO)
+}
+
+# input an arc to get the index of the location that it goes to
+arc_destination <- function(A){
+  which(locations$purpose == arcs$to_purpose[A] & locations$entity == arcs$to_entity[A])
+}
+
+# input an arc to get the index of the location that is leaving from
+arc_source <- function(A){
+  which(locations$purpose == arcs$from_purpose[A] & locations$entity == arcs$from_entity[A])
+}
+```
+
+
+```{r}
+
+# 2. Start and End locations for each workorder
+Start <- setNames(workorders$Origination, workorders$WorkOrderNumber)
+End   <- setNames(workorders$Destination, workorders$WorkOrderNumber)
+
+locs <- locations$location
+
+# Normalize Start and End to match Arrive
+Start <- setNames(str_replace_all(Start, "\\s*,\\s*", ", "), names(Start))
+End   <- setNames(str_replace_all(End,   "\\s*,\\s*", ", "), names(End))
+locs <- setNames(str_replace_all(locs,   "\\s*,\\s*", ", "), names(locs))
+
+# Precompute arcs leaving each pickup
+
+
+# 3. Driver start/end locations
+DriverStart <- setNames(drivers$Start_location, drivers$DriverID)
+DriverEnd   <- setNames(drivers$End_location, drivers$DriverID)
+
+# 4. Pay and Salary vectors
+Pay    <- setNames(drivers$`Hourly Wage`,drivers$DriverID)
+Salary    <- setNames(drivers$`Annual Salary`,drivers$DriverID)
+
+# 5. Capacity and MaxNights
+Capacity   <- setNames(drivers$`Max Load Pounds`, drivers$DriverID)
+MaxNights  <- setNames(drivers$MaxNightsOvernightPerWeek, drivers$DriverID)
+
+# 6. Workorder weights and due days
+Weight    <- setNames(workorders$LoadWeight, workorders$WorkOrderNumber)
+DaysDue   <- setNames(workorders$DeliveryDays, workorders$WorkOrderNumber)
+
+
+Drivers <- drivers$DriverID %>% as.character()
+Orders  <- workorders$WorkOrderNumber %>% as.character()
+Arcs    <- arcs$arc_id 
+Miles <- arcs$Miles
+Mundelivered <- 1e3  # penalty for unassigned workorders
+DriveTime <- arcs$DriveTime
+DeliveryDays <- workorders$DeliveryDays
+
+```
+
+Test constraints - Delete later
+```{r}
+ # cons <- extract_constraints(model)
+ # conmat <- as.matrix(cons$matrix)
+ # rowSums(conmat)
+```
+
+
+
+```{r}
+
+# -----------------------------
+
+
+# Assuming workorders, drivers, arcs are already defined as in  previous code
+
+model <- MIPModel() %>%
+
+  # --------------------------------------------------
+  # DV 1: Assign[d,w] — driver assigned to workorder
+  # --------------------------------------------------
+  add_variable(
+    Assign[d, w],
+    type = "binary",
+    d = Drivers,
+    w = Orders
+  ) %>%
+
+  # --------------------------------------------------
+  # DV 2: Unassign[w] — workorder left unassigned
+  # --------------------------------------------------
+  add_variable(
+    Unassign[w],
+    type = "binary",
+    w = Orders
+  ) %>%
+
+  # --------------------------------------------------
+  # DV 3: Drive[k, d] — driver d drives arc k
+  # --------------------------------------------------
+  add_variable(
+    Drive[k, d],
+    type = "binary",
+    k = 1:nrow(arcs),
+    d = Drivers
+  ) %>%
+
+  # --------------------------------------------------
+  # DV 4: Arrive[i] — arrival time at location i
+  # --------------------------------------------------
+  add_variable(
+    Arrive[i],
+    type = "continuous",
+    lb = 0,
+    i = 1:nrow(locations)
+  ) %>%
+
+  # --------------------------------------------------
+  # DV 5: Load[i] — load entering location i
+  # --------------------------------------------------
+  add_variable(
+    Load[i],
+    type = "continuous",
+    lb = -100,
+    i = 1:nrow(locations)
+  ) %>%
+
+  # --------------------------------------------------
+  # DV 6: Days[d] — total days driver d spends on road
+  # --------------------------------------------------
+  add_variable(
+    Days[d],
+    type = "integer",
+    lb = 0,
+    d = Drivers
+  ) |>
+  # --------------------------------------------------
+  # DV 7: Value Tester Var
+  # --------------------------------------------------
+  add_variable(LoadTesterVar, type = "continuous")
+
+
+# -----------------------------
+# Constraints
+# -----------------------------
+
+# 1)Only one driver can be assigned to a given workorder
+model <- model %>%
+  add_constraint(
+    sum_over(Assign[d, w], d = Drivers) == 1 - Unassign[w],
+    w = Orders
+  )  
+
+model <- model %>%
+  add_constraint()  
+
+#flow
+# A driver only goes to a work order pickup if that driver is assigned
+model <- model %>%
+ add_constraint(
+    sum_over(
+      Drive[a, d],
+      a = 1:nrow(arcs),
+      arcs$to_purpose[a] == "pickup",
+      arcs$to_entity[a] == w
+    ) == Assign[d, w],
+    d = Drivers,
+    w = Orders
+  )
+
+# A driver only leaves a work order pickup if that driver is assigned
+model <- model %>%
+  add_constraint(
+  sum_over(
+      Drive[a, d],
+      a = 1:nrow(arcs),
+      arcs$from_purpose[a] == "pickup", # arcs leaving pickup location
+      arcs$to_entity[a] == w
+    ) == Assign[d, w],
+    d = Drivers,
+    w = Orders)
+
+# A driver only arrives at a work order dropoff if that driver is assigned
+model <- model %>%
+ add_constraint(
+    sum_over(
+      Drive[a, d],
+      a = 1:nrow(arcs),
+      arcs$to_purpose[a] == "dropoff", # arcs arriving to dropoff location
+      arcs$to_entity[a] == w
+    ) == Assign[d, w],
+    d = Drivers,
+    w = Orders
+  )
+
+# A driver only leaves a work order dropoff if that driver is assigned
+model <- model %>%
+  add_constraint(
+  sum_over(
+      Drive[a, d],
+       a = 1:nrow(arcs),
+      arcs$from_purpose[a] == "dropoff", # # arcs leaving dropoff locationn
+      arcs$to_entity[a] == w
+    ) == Assign[d, w],
+    d = Drivers,
+    w = Orders
+  )
+
+#Drivers must leave their start location and reach their end location
+model <- model %>%
+  add_constraint(
+    sum_over(
+      Drive[a, d],
+      a = 1:nrow(arcs), 
+      arcs$from_purpose[a] == "start", # arcs leaving driver's start
+      arcs$from_entity[a] == d
+    ) == 1,
+    d = Drivers
+  ) 
+
+
+model<-model %>%
+  add_constraint(
+    sum_over(
+      Drive[a, d],
+       a = 1:nrow(arcs), 
+      arcs$to_purpose[a] == "end", # arcs arriving to driver's end
+      arcs$to_entity[a] == d
+    ) == 1,
+    d = Drivers
+  )
+  
+model <- model %>%
+     add_constraint(
+    Arrive[i] == 0,
+    i = 1:nrow(locations), 
+    locations$purpose[i] == "start"
+  )
+
+model <- model %>%
+      add_constraint(
+    Arrive[pickup_location(w)] <= Arrive[dropoff_location(w)],
+    w = Orders
+  )
+
+M_LongTime <- 1000  # large number for big-M trick
+
+model <- model %>%
+  add_constraint(
+    Arrive[arc_source(a)] + arcs$DriveTime[a] <= 
+      Arrive[arc_destination(a)] + M_LongTime * (1 - sum_over(Drive[a, d], d = Drivers)),
+    a = arcs$arc_id
+  )
+
+model <- model %>%
+  add_constraint(
+    Arrive[arc_source(a)] + arcs$DriveTime[a] >= 
+      Arrive[arc_destination(a)] - M_LongTime * (1 - sum_over(Drive[a, d], d = Drivers)),
+    a = arcs$arc_id
+  )
+
+
+#Load at driver homes
+ # Load at driver starting location = 0
+
+model <- model %>%
+  add_constraint(
+    Load[i] == 0,
+    i = 1:nrow(locations),
+    locations$purpose[i] == "start", 
+  )
+
+  # Load at driver ending location = 0
+model <- model %>%
+   add_constraint(
+    Load[i] == 0,
+    i = 1:nrow(locations),
+    locations$purpose[i] == "end", 
+  )
+
+```
+
+```{r}
+# Load at pickup ≤ driver capacity if assigned
+model <- model %>%
+  add_constraint(
+    Load[i] <= sum_over(Capacity[d] * Assign[d, w], d = Drivers),
+    w = Orders,
+    i = 1:nrow(locations),
+    locations$purpose[i] == "pickup",
+    locations$entity[i] == w
+  )
+
+  # Load at dropoff ≤ driver capacity if assigned
+model <- model %>%
+   add_constraint(
+    Load[i] <= sum_over(Capacity[d] * Assign[d, w], d = Drivers),
+    w = Orders,
+    i = 1:nrow(locations),
+    locations$purpose[i] == "dropoff",
+    locations$entity[i] == w
+  )
+
+M_load <- max(Weight) * 10  # Big-M for loads
+
+
+model <- model %>%
+    add_constraint(
+      Load[pickup_location(w)] + Weight[w] <= Load[arc_destination(a)] + sum_over((1 - Drive[a, d]), d=Drivers) * M_load,
+      w = Orders,
+      a = 1:nrow(arcs),
+      arcs$from_purpose[a] =="pickup",
+      arcs$from_entity[a] == w )
+
+model <- model %>%
+    add_constraint(
+      Load[pickup_location(w)] + Weight[w] >= Load[arc_destination(a)] - sum_over((1 - Drive[a, d]), d=Drivers) * M_load,
+      w = Orders,
+      a = 1:nrow(arcs),
+      arcs$from_purpose[a] =="pickup",
+      arcs$from_entity[a] == w )
+
+# Dropoff constraints: Load at drop - weight ≤ Load at next location
+model <- model %>%
+    add_constraint(
+      Load[dropoff_location(w)] + Weight[w] <= Load[arc_destination(a)] + sum_over((1 - Drive[a, d]), d=Drivers) * M_load,
+      w = Orders,
+      a = 1:nrow(arcs),
+      arcs$from_purpose[a] =="dropoff",
+      arcs$from_entity[a] == w )
+
+model <- model %>%
+    add_constraint(
+      Load[dropoff_location(w)] + Weight[w] >= Load[arc_destination(a)] - sum_over((1 - Drive[a, d]), d=Drivers) * M_load,
+      w = Orders,
+      a = 1:nrow(arcs),
+      arcs$from_purpose[a] =="dropoff",
+      arcs$from_entity[a] == w )
+
+
+```
+
+
+
+
+```{r}
+model <- model %>%
+add_constraint(Days[d] >= sum_over(Drive[a, d] * arcs$DriveTime[a], a = arcs$arc_id) / 11, d = Drivers) 
+
+
+model <- model %>%
+  # Days <= max nights + 1
+  add_constraint(
+    Days[d] <= MaxNights[d] + 1,
+    d = Drivers
+  ) 
+
+
+
+
+# -----------------------------
+# Objective
+# -----------------------------
+
+#see below 
+
+
+```
+
+```{r}
+model <- model |>
+  add_constraint(LoadTesterVar == Load[arc_destination(a)] + sum_over((1 - Drive[a, d]), d="JZE01") * M_load, w = "WO023", a = 2, arcs$from_purpose[a] =="dropoff", arcs$from_entity[a] == w)
+```
+
+```{r}
+# Then the objective becomes:
+model <- model %>%
+  set_objective(
+    # Fuel cost
+    sum_over(0.5 * Miles[k] * Drive[k, d], k = 1:nrow(arcs), d = Drivers) +
+    
+    # Driver pay
+    sum_over(DriveTime[k] * Drive[k, d] * Pay[d], k = 1:nrow(arcs), d = Drivers) +
+    
+    # Salaries
+    sum_over(Salary[d], d = Drivers) +
+    
+    # Extra day cost
+    sum_over(175 * (Days[d] - 1), d = Drivers) +
+      
+      # Penalty for unassigned workorders
+    sum_over(1000/DaysDue[w] * Unassign[w], w = Orders),
+    
+    # Penalty for unassigned workorders,
+    sense = "min"
+  )
+# -----------------------------
+# Solve
+# -----------------------------
+result <- solve_model(model, with_ROI(solver = "glpk", verbose = TRUE))
+get_solution(result, LoadTesterVar)
+
+```
+
+```{r}
+load_results <- get_solution(result, Load[i])
+load_analysis <- load_results %>%
+  mutate(i = as.integer(i)) %>%        # ensure numeric for join
+  left_join(
+    locations %>% mutate(i = row_number()),
+    by = "i"
+  ) %>%
+  select(i, location, purpose, entity, load = value)
+write_csv(load_analysis, "load_results.csv")
+drive_vals <- get_solution(result, Drive[a,d])
+drive_filtered <- drive_vals |>
+  filter(value == 1)
+total_drive_sum <-sum(drive_vals$value)
+total_drive_sum
+drive_filtered
+arcs
+```
+
+```{r}
+arcs
+drive_selected <- drive_vals %>%
+  filter(value == 1)
+
+drive_with_arcs <- drive_selected %>%
+  left_join(arcs, by = c("a" = "arc_id"))
+drive_with_arcs
+```
+
+

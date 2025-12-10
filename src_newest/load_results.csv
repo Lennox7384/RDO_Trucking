@@ -1,0 +1,79 @@
+i,location,purpose,entity,load
+1,"Aberdeen, SD",pickup,WO023,-100
+2,"Aberdeen, SD",pickup,WO107,-100
+3,"Aberdeen, SD",pickup,WO129,-100
+4,"Bismarck, ND",pickup,WO165,-100
+5,"Bismarck, ND",pickup,WO108,-100
+6,"Breckenridge, MN",pickup,WO097,-100
+7,"Breckenridge, MN",pickup,WO049,-100
+8,"Burnsville, MN",pickup,WO011,-100
+9,"Burnsville, MN",pickup,WO119,-100
+10,"Burnsville, MN",pickup,WO078,-100
+11,"Casper, WY",pickup,WO070,-100
+12,"Casselton, ND",pickup,WO091,-100
+13,"Casselton, ND",pickup,WO056,-100
+14,"Casselton, ND",pickup,WO153,-100
+15,"Dayton, MN",pickup,WO123,-100
+16,"Dayton, MN",pickup,WO134,-100
+17,"Dayton, MN",pickup,WO040,-100
+18,"Dickinson, ND",pickup,WO145,-100
+19,"Dickinson, ND",pickup,WO179,-100
+20,"Fergus Falls, MN",pickup,WO128,-100
+21,"Fergus Falls, MN",pickup,WO147,-100
+22,"Kindred, ND",pickup,WO176,-100
+23,"Kindred, ND",pickup,WO018,-100
+24,"Lisbon, ND",pickup,WO060,-100
+25,"Lisbon, ND",pickup,WO077,-100
+26,"Marshall, MN",pickup,WO051,-100
+27,"Marshall, MN",pickup,WO099,-100
+28,"Missoula, MT",pickup,WO169,-100
+29,"Moorhead, MN",pickup,WO013,-100
+30,"Moorhead, MN",pickup,WO122,-100
+31,"Moorhead, MN",pickup,WO178,-100
+32,"Redfield,SD",pickup,WO001,-100
+33,"Redfield,SD",pickup,WO044,-100
+34,"Redfield,SD",pickup,WO048,-100
+35,"Salt Lake City, UT",pickup,WO069,-100
+36,"Washburn, ND",pickup,WO116,-100
+37,"Burnsville, MN",dropoff,WO023,-100
+38,"Missoula, MT",dropoff,WO107,-100
+39,"Bismarck, ND",dropoff,WO129,-100
+40,"Casper, WY",dropoff,WO165,-100
+41,"Dickinson, ND",dropoff,WO108,-100
+42,"Dayton, MN",dropoff,WO097,-100
+43,"Kindred, ND",dropoff,WO049,-100
+44,"Dickinson, ND",dropoff,WO011,-100
+45,"Kindred, ND",dropoff,WO119,-100
+46,"Kindred, ND",dropoff,WO078,-100
+47,"Bismarck, ND",dropoff,WO070,-100
+48,"Lisbon, ND",dropoff,WO091,-100
+49,"Moorhead, MN",dropoff,WO056,-100
+50,"Salt Lake City, UT",dropoff,WO153,-100
+51,"Moorhead, MN",dropoff,WO123,-100
+52,"Lisbon, ND",dropoff,WO134,-100
+53,"Moorhead, MN",dropoff,WO040,-100
+54,"Breckenridge, MN",dropoff,WO145,-100
+55,"Redfield,SD",dropoff,WO179,-100
+56,"Missoula, MT",dropoff,WO128,-100
+57,"Moorhead, MN",dropoff,WO147,-100
+58,"Fergus Falls, MN",dropoff,WO176,-100
+59,"Marshall, MN",dropoff,WO018,-100
+60,"Bismarck, ND",dropoff,WO060,-100
+61,"Casselton, ND",dropoff,WO077,-100
+62,"Casper, WY",dropoff,WO051,-100
+63,"Missoula, MT",dropoff,WO099,-100
+64,"Dayton, MN",dropoff,WO169,-100
+65,"Missoula, MT",dropoff,WO013,-100
+66,"Kindred, ND",dropoff,WO122,-100
+67,"Aberdeen, SD",dropoff,WO178,-100
+68,"Casper, WY",dropoff,WO001,-100
+69,"Dickinson, ND",dropoff,WO044,-100
+70,"Salt Lake City, UT",dropoff,WO048,-100
+71,"Moorhead, MN",dropoff,WO069,-100
+72,"Casselton, ND",dropoff,WO116,-100
+73,"Aberdeen, SD",start,JZE01,0
+74,"Bismarck, ND",start,MSW01,0
+75,"Breckenridge, MN",start,1SH01,0
+76,"Aberdeen, SD",end,JZE01,0
+77,"Bismarck, ND",end,MSW01,0
+78,"Breckenridge, MN",end,1SH01,0
