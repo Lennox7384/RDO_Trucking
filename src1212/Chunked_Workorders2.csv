@@ -1,0 +1,12 @@
+WorkOrderNumber,Origination,Destination,LoadWeight,DeliveryDays,Chunk_Random,Chunk_Big
+WO023,"Aberdeen, SD","Burnsville, MN",19600,1,1,1
+WO068,"Aberdeen, SD","Salt Lake City, UT",84700,1,2,2
+WO120,"Aberdeen, SD","Casselton, ND",70800,2,3,1
+WO012,"Aberdeen, SD","Lisbon, ND",47900,3,4,1
+WO009,"Aberdeen, SD","Casper, WY",28500,4,5,2
+WO107,"Aberdeen, SD","Missoula, MT",39900,4,1,2
+WO053,"Aberdeen, SD","Washburn, ND",70100,6,2,1
+WO026,"Aberdeen, SD","Burnsville, MN",70000,7,3,1
+WO055,"Aberdeen, SD","Lisbon, ND",64100,7,4,1
+WO150,"Aberdeen, SD","Lisbon, ND",67500,8,5,1
+WO129,"Aberdeen, SD","Bismarck, ND",30400,9,1,1

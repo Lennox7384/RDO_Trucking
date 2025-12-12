@@ -1,0 +1,2 @@
+WorkOrderNumber,Origination,Destination,LoadWeight,DeliveryDays,Chunk_Random,Chunk_Big
+WO023,"Aberdeen, SD","Burnsville, MN",19600,1,1,1
