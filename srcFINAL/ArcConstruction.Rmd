@@ -474,7 +474,7 @@ model <- model %>%
   )
 
 
-# Load at pickup + weight ≤ Load at next pick up location?
+# Load at pickup + weight is load at desitination
 model <- model %>%
     add_constraint(
       Load[pickup_location(w)] + Weight[w] <= Load[arc_destination(a)] + (1 - sum_over( Drive[a, d], d=Drivers)) * M_load, 
@@ -482,6 +482,7 @@ model <- model %>%
       a = 1:nrow(arcs), 
       arcs$from_purpose[a] =="pickup", 
       arcs$from_entity[a] == w )
+
 model <- model %>%
     add_constraint(
       Load[pickup_location(w)] + Weight[w] >= Load[arc_destination(a)] - ( 1 - sum_over( Drive[a, d], d=Drivers) )* M_load, 
@@ -509,14 +510,12 @@ model <- model %>%
       arcs$from_entity[a] == w ) 
 
 
-
-```
-
-```{r}
+#Setting the day variable for all drivers
+#This is based on an 11 hour driving day
 model <- model %>%
 add_constraint(Days[d] >= sum_over(Drive[a, d] * arcs$DriveTime[a], a = arcs$arc_id) / 11, d = Drivers) 
 
-
+#Drivers cannot drive more days than they have max nights + 1
 model <- model %>%
   # Days <= max nights + 1
   add_constraint(
